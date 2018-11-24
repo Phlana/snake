@@ -4,9 +4,9 @@ from config import *
 import random
 
 # client = discord.Client()
-client = commands.Bot(command_prefix="[")
-client.remove_command("help")
 config = Config()
+client = commands.Bot(command_prefix=config.prefix)
+client.remove_command("help")
 # welcome_channel =
 
 
@@ -19,7 +19,7 @@ async def on_ready():
 
 # general commands
 # help
-@client.command(pass_context=True)
+@client.command(pass_context=True, aliases=["h", "hlep"])
 async def help(ctx):
     help_embed = discord.Embed(colour=discord.Colour.orange())
 
@@ -42,20 +42,20 @@ async def help(ctx):
     help_embed.add_field(name="*silence <@user>", value="mutes <@user> from all text and voice channels", inline=False)
     help_embed.add_field(name="*kick <@user>", value="kicks <@user> from server", inline=False)
     help_embed.add_field(name="*ban <@user>", value="bans <@user> from server", inline=False)
-    await client.send_message(ctx.message.author, embed=help_embed)
+    client.send_message(ctx.message.author, embed=help_embed)
 
 
 # member count
 @client.command(pass_context=True)
 async def members(ctx):
     member_count = 0
-    for member in ctx.message.server.members:
+    for m in ctx.message.server.members:
         member_count += 1
     await client.say("{} members found".format(member_count))
 
 
 # server info
-@client.command(pass_context=True)
+@client.command(pass_context=True, aliases=["serverinfo", "server info", "server", "s"])
 async def sinfo(ctx):
     member_count = 0
     online_count = 0
@@ -94,15 +94,15 @@ async def sinfo(ctx):
 
 
 # roll
-@client.command(pass_context=True)
+@client.command(pass_context=True, aliases=["r"])
 async def roll(ctx, num=100):
     await client.say("{} rolls a {}".format(ctx.message.author.mention, random.randint(1, num)))
 
 
 # enlage emoji
-@client.command()
-async def e(emoji: discord.Emoji):
-    await client.say(emoji.url)
+@client.command(aliases=["e"])
+async def emoji(emojiobj: discord.Emoji):
+    await client.say(emojiobj.url)
 
 
 # mod commands
@@ -124,11 +124,37 @@ async def prune(ctx, num=50):
 # mute
 @client.command(pass_context=True)
 async def mute(ctx):
-    async for member in ctx.message.mentions:
-        async for channel in member.server.channels:
-            if channel.type == discord.ChannelType.text:
-                await channel.set_permissions(member, send_messages=False)
-        await client.say("muted {}".format(member))
+    memberlist = ctx.message.mentions
+    rolelist = ctx.message.role_mentions
+    print(len(memberlist), memberlist)
+    print(len(rolelist), rolelist)
+    if len(memberlist) == 0 & len(rolelist) == 0:
+        await client.say("please mention a user or role")
+    if len(memberlist) + len(rolelist) > 1:
+        await client.say("please mention only one user or role")
+        return
+    if len(memberlist) == 1:
+        # try:
+            for channel in memberlist[0].server.channels:
+                if channel.type == discord.ChannelType.text:
+                    await client.edit_channel_permissions()
+                    await channel.set_permissions(memberlist[0], send_messages=False)
+                    await client.say("muted {}".format(memberlist[0]))
+        # except:
+            await client.say("failed to mute {}".format(memberlist[0]))
+    if len(rolelist) == 1:
+        # try:
+        #     rolelist[0].permissions.send_messages = False
+            await client.edit_role(rolelist[0].server, rolelist[0], permissions=discord.Permissions(send_messages=True))
+            await client.say("muted {} role".format(rolelist[0]))
+        # except:
+            await client.say("failed to mute {} role".format(rolelist[0]))
+
+    # async for member in ctx.message.mentions:
+    #     async for channel in member.server.channels:
+    #         if channel.type == discord.ChannelType.text:
+    #             await channel.set_permissions(member, send_messages=False)
+    #     await client.say("muted {}".format(member))
 
 
 # unmute
